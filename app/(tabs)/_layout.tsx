@@ -107,6 +107,20 @@ return (
     />
 
     <Tabs.Screen
+        name="ia"
+        options={{
+        title: 'IA',
+        tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+            name={focused ? 'sparkles' : 'sparkles-outline'}
+            size={23}
+            color={color}
+            />
+        ),
+        }}
+    />
+
+    <Tabs.Screen
         name="perfil"
         options={{
         title: 'Perfil',
