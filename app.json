@@ -25,7 +25,48 @@
       "expo-font",
       "expo-status-bar",
       "expo-web-browser",
-      "@react-native-community/datetimepicker"
+      "expo-notifications",
+      [
+        "@react-native-community/datetimepicker",
+        {
+          "android": {
+            "datePicker": {
+              "colorAccent": {
+                "light": "#7957DC"
+              },
+              "textColor": {
+                "light": "#292342"
+              },
+              "textColorPrimary": {
+                "light": "#292342"
+              },
+              "textColorSecondary": {
+                "light": "#817995"
+              },
+              "windowBackground": {
+                "light": "#FFFFFF"
+              }
+            },
+            "timePicker": {
+              "background": {
+                "light": "#FFFFFF"
+              },
+              "headerBackground": {
+                "light": "#7957DC"
+              },
+              "numbersBackgroundColor": {
+                "light": "#FFFFFF"
+              },
+              "numbersSelectorColor": {
+                "light": "#EDE6FF"
+              },
+              "numbersTextColor": {
+                "light": "#292342"
+              }
+            }
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
@@ -33,7 +74,7 @@
     },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "assetBundlePatterns": [
       "**/*"
     ],

@@ -13,10 +13,14 @@ El proyecto está construido con React Native y Expo, con Expo Router para la na
 - Detección de conflictos de horario.
 - Fechas de inicio y término por materia.
 - Colores y notas personalizadas para cada clase.
+- Creación, consulta, edición y eliminación de tareas relacionadas con una materia.
+- Filtros de tareas por estado, materia y prioridad.
+- Indicadores de tareas próximas y vencidas considerando fecha y hora.
+- Recordatorios locales de entrega en el dispositivo.
 - Selector de fechas nativo para Android y iOS.
 - Mostrar u ocultar la contraseña desde el formulario de autenticación.
 
-Las secciones de tareas e IA todavía están en desarrollo.
+La sección de IA todavía está en desarrollo.
 
 ## Requisitos
 
@@ -95,11 +99,30 @@ Campos principales:
 - `created_at`
 - `updated_at`
 
+### `tasks`
+
+Guarda las actividades académicas relacionadas con una materia registrada.
+
+Campos principales:
+
+- `id`
+- `user_id`
+- `class_id` como referencia obligatoria a `schedule_classes`
+- `title`
+- `description`
+- `due_date`
+- `due_time`
+- `priority` (`low`, `medium` o `high`)
+- `status` (`pending` o `completed`)
+- `created_at`
+- `updated_at`
+
 La base de datos debe tener:
 
-- RLS habilitado en `profiles` y `schedule_classes`.
+- RLS habilitado en `profiles`, `schedule_classes` y `tasks`.
 - Policies para que cada usuario solo pueda consultar y modificar sus propios registros.
 - Una restricción que garantice que `end_time` sea posterior a `start_time`.
+- La migración `supabase/migrations/20261021215647_tasks_rls_and_indexes.sql` contiene las policies e índice de consulta de tareas.
 - Un trigger que actualice automáticamente `updated_at`.
 - Un trigger de registro de usuario si se desea crear automáticamente la fila correspondiente en `profiles`.
 
@@ -111,6 +134,7 @@ La configuración SQL se administra actualmente desde Supabase. Se recomienda co
 app/                 Rutas y pantallas de Expo Router
   (tabs)/            Navegación principal de la aplicación
   horario/           Lista, creación y detalle de clases
+  tareas/            Lista, creación, edición y detalle de tareas
 components/
   atoms/             Componentes pequeños reutilizables
   molecules/         Componentes compuestos
@@ -155,4 +179,4 @@ npm run format
 
 ## Estado del proyecto
 
-El objetivo principal actual es la aplicación móvil para Android e iOS. La recuperación de contraseña, las tareas y la sección de IA todavía requieren trabajo adicional.
+El objetivo principal actual es la aplicación móvil para Android e iOS. La sección de IA todavía requiere trabajo adicional.
