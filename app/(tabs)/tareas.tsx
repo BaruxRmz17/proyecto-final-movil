@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useScheduleClasses } from '@/hooks/useScheduleClasses';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { getTaskDueDate } from '@/utils/taskDates';
 import {
 fetchTasks,
 toggleTaskAsync,
@@ -53,23 +54,6 @@ return new Intl.DateTimeFormat('es-MX', {
     day: 'numeric',
     month: 'long',
 }).format(new Date(year, month - 1, day));
-}
-
-function getTaskDueDate(task: TaskRecord): Date {
-const [year, month, day] = task.due_date.split('-').map(Number);
-const [hours, minutes] = task.due_time
-    ? task.due_time.slice(0, 5).split(':').map(Number)
-    : [23, 59];
-
-return new Date(
-    year,
-    month - 1,
-    day,
-    Number.isFinite(hours) ? hours : 23,
-    Number.isFinite(minutes) ? minutes : 59,
-    0,
-    0
-);
 }
 
 function daysUntil(task: TaskRecord, now: Date): number {

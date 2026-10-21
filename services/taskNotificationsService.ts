@@ -3,10 +3,21 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import type { TaskRecord } from '@/types/tasks';
+import { getTaskDueDate } from '@/utils/taskDates';
 
-const STORAGE_KEY = '@campus-mind/task-notification-ids';
+const STORAGE_KEY = '@campus-mind/task-notifications-v2';
+const LEGACY_STORAGE_KEY = '@campus-mind/task-notification-ids';
+const NOTIFICATION_SOURCE = 'campus-mind-task';
 
-type NotificationMap = Record<string, string[]>;
+interface StoredNotificationRecord {
+identifiers: string[];
+fingerprint: string;
+}
+
+type NotificationState = Record<
+string,
+Record<string, StoredNotificationRecord>
+>;
 
 let handlerConfigured = false;
 
@@ -25,20 +36,60 @@ Notifications.setNotificationHandler({
 handlerConfigured = true;
 }
 
-async function readNotificationMap(): Promise<NotificationMap> {
+async function readNotificationState(): Promise<NotificationState> {
 const value = await AsyncStorage.getItem(STORAGE_KEY);
 
 if (!value) return {};
 
 try {
-    return JSON.parse(value) as NotificationMap;
+    return JSON.parse(value) as NotificationState;
 } catch {
     return {};
 }
 }
 
-async function writeNotificationMap(map: NotificationMap) {
-await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+async function writeNotificationState(state: NotificationState) {
+await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+async function cancelIdentifiers(identifiers: string[]) {
+await Promise.all(
+    identifiers.map((identifier) =>
+    Notifications.cancelScheduledNotificationAsync(
+        identifier
+    )
+    )
+);
+}
+
+async function getManagedNotifications(
+taskId?: string
+) {
+const scheduled =
+    await Notifications.getAllScheduledNotificationsAsync();
+
+return scheduled.filter((notification) => {
+    const data = notification.content.data as {
+        source?: string;
+        taskId?: string;
+    };
+
+    return (
+        data?.source === NOTIFICATION_SOURCE &&
+        (!taskId || data.taskId === taskId)
+    );
+});
+}
+
+async function cancelManagedNotifications(
+taskId?: string
+) {
+const notifications = await getManagedNotifications(taskId);
+const identifiers = notifications.map(
+    (notification) => notification.identifier
+);
+
+await cancelIdentifiers(identifiers);
 }
 
 async function hasNotificationPermission(
@@ -53,32 +104,26 @@ const requested = await Notifications.requestPermissionsAsync();
 return requested.granted;
 }
 
-function getTaskDueDate(task: TaskRecord): Date {
-const [year, month, day] = task.due_date.split('-').map(Number);
-const [hours, minutes] = task.due_time
-    ? task.due_time.slice(0, 5).split(':').map(Number)
-    : [23, 59];
-
-return new Date(
-    year,
-    month - 1,
-    day,
-    Number.isFinite(hours) ? hours : 23,
-    Number.isFinite(minutes) ? minutes : 59,
-    0,
-    0
-);
+function getTaskFingerprint(task: TaskRecord): string {
+return [
+    task.id,
+    task.user_id,
+    task.title,
+    task.due_date,
+    task.due_time ?? '',
+    task.status,
+].join('|');
 }
 
-async function scheduleTaskNotifications(
+async function createTaskNotifications(
 task: TaskRecord,
 requestPermission: boolean
-) {
+): Promise<StoredNotificationRecord | null> {
 if (
     Platform.OS === 'web' ||
     task.status === 'completed'
 ) {
-    return;
+    return null;
 }
 
 configureNotificationHandler();
@@ -92,7 +137,7 @@ if (Platform.OS === 'android') {
 
 const allowed = await hasNotificationPermission(requestPermission);
 
-if (!allowed) return;
+if (!allowed) return null;
 
 const dueDate = getTaskDueDate(task);
 const reminders = [
@@ -106,7 +151,7 @@ const reminders = [
     },
 ].filter((reminder) => reminder.date.getTime() > Date.now());
 
-if (reminders.length === 0) return;
+if (reminders.length === 0) return null;
 
 const identifiers = await Promise.all(
     reminders.map((reminder) =>
@@ -114,7 +159,11 @@ const identifiers = await Promise.all(
         content: {
         title: 'Entrega pendiente',
         body: `"${task.title}" vence ${reminder.label}.`,
-        data: { taskId: task.id },
+        data: {
+            source: NOTIFICATION_SOURCE,
+            taskId: task.id,
+            userId: task.user_id,
+        },
         sound: false,
         },
         trigger: {
@@ -128,56 +177,200 @@ const identifiers = await Promise.all(
     )
 );
 
-const map = await readNotificationMap();
-map[task.id] = identifiers;
-await writeNotificationMap(map);
+return {
+    identifiers,
+    fingerprint: getTaskFingerprint(task),
+};
+}
+
+async function saveTaskRecord(
+task: TaskRecord,
+record: StoredNotificationRecord | null
+) {
+const state = await readNotificationState();
+const userState = state[task.user_id] ?? {};
+
+if (record) {
+    userState[task.id] = record;
+} else {
+    delete userState[task.id];
+}
+
+if (Object.keys(userState).length > 0) {
+    state[task.user_id] = userState;
+} else {
+    delete state[task.user_id];
+}
+
+await writeNotificationState(state);
+}
+
+export async function reconcileTaskNotifications(
+userId: string,
+tasks: TaskRecord[]
+) {
+if (Platform.OS === 'web') return;
+
+try {
+    const previousState = await readNotificationState();
+    const legacyValue = await AsyncStorage.getItem(
+    LEGACY_STORAGE_KEY
+    );
+
+    if (legacyValue) {
+    try {
+        const legacyMap = JSON.parse(
+        legacyValue
+        ) as Record<string, string[]>;
+
+        await cancelIdentifiers(
+        Object.values(legacyMap).flat()
+        );
+    } catch {
+        // Ignorar datos antiguos corruptos.
+    }
+
+    await AsyncStorage.removeItem(LEGACY_STORAGE_KEY);
+    }
+
+    const scheduled = await getManagedNotifications();
+    const scheduledIds = new Set(
+    scheduled.map((notification) => notification.identifier)
+    );
+    const retainedIds = new Set<string>();
+
+    const nextUserState: Record<
+    string,
+    StoredNotificationRecord
+    > = {};
+
+    for (const task of tasks) {
+    if (
+        task.user_id !== userId ||
+        task.status === 'completed'
+    ) {
+        continue;
+    }
+
+    const previousRecord =
+        previousState[userId]?.[task.id];
+
+    if (
+        previousRecord &&
+        previousRecord.fingerprint ===
+        getTaskFingerprint(task) &&
+        previousRecord.identifiers.every((identifier) =>
+        scheduledIds.has(identifier)
+        )
+    ) {
+        nextUserState[task.id] = previousRecord;
+        previousRecord.identifiers.forEach((identifier) =>
+        retainedIds.add(identifier)
+        );
+        continue;
+    }
+
+    if (previousRecord) {
+        await cancelIdentifiers(previousRecord.identifiers);
+    }
+
+    const record = await createTaskNotifications(task, false);
+
+    if (record) {
+        nextUserState[task.id] = record;
+        record.identifiers.forEach((identifier) =>
+        retainedIds.add(identifier)
+        );
+    }
+    }
+
+    const orphanedIds = scheduled
+    .map((notification) => notification.identifier)
+    .filter((identifier) => !retainedIds.has(identifier));
+
+    await cancelIdentifiers(orphanedIds);
+
+    await writeNotificationState({
+    [userId]: nextUserState,
+    });
+} catch {
+    // La reconciliación no debe impedir cargar las tareas.
+}
 }
 
 export async function cancelTaskNotifications(taskId: string) {
 if (Platform.OS === 'web') return;
 
 try {
-    const map = await readNotificationMap();
-    const identifiers = map[taskId] ?? [];
+    const state = await readNotificationState();
 
-    await Promise.all(
-    identifiers.map((identifier) =>
-        Notifications.cancelScheduledNotificationAsync(
-        identifier
-        )
-    )
-    );
+    for (const userState of Object.values(state)) {
+    const record = userState[taskId];
 
-    delete map[taskId];
-    await writeNotificationMap(map);
+    if (record) {
+        await cancelIdentifiers(record.identifiers);
+        delete userState[taskId];
+    }
+    }
+
+    await cancelManagedNotifications(taskId);
+    await writeNotificationState(state);
 } catch {
     // Las notificaciones no deben impedir guardar o eliminar una tarea.
+}
+}
+
+export async function clearAllTaskNotifications() {
+if (Platform.OS === 'web') return;
+
+try {
+    const state = await readNotificationState();
+    const legacyValue = await AsyncStorage.getItem(
+    LEGACY_STORAGE_KEY
+    );
+    const identifiers = Object.values(state)
+    .flatMap((userState) =>
+        Object.values(userState).flatMap(
+        (record) => record.identifiers
+        )
+    );
+
+    await cancelIdentifiers(identifiers);
+
+    if (legacyValue) {
+    try {
+        const legacyMap = JSON.parse(
+        legacyValue
+        ) as Record<string, string[]>;
+
+        await cancelIdentifiers(
+        Object.values(legacyMap).flat()
+        );
+    } catch {
+        // Ignorar datos antiguos corruptos.
+    }
+    }
+
+    await cancelManagedNotifications();
+    await AsyncStorage.multiRemove([
+    STORAGE_KEY,
+    LEGACY_STORAGE_KEY,
+    ]);
+} catch {
+    // No bloquear el cierre de sesión si las notificaciones fallan.
 }
 }
 
 export async function rescheduleTaskNotifications(
 task: TaskRecord
 ) {
-try {
-    await cancelTaskNotifications(task.id);
-    await scheduleTaskNotifications(task, true);
-} catch {
-    // Las notificaciones son una ayuda opcional del dispositivo.
-}
-}
-
-export async function ensureTaskNotifications(
-task: TaskRecord
-) {
 if (Platform.OS === 'web') return;
 
 try {
-    const map = await readNotificationMap();
-
-    if (map[task.id]?.length) return;
-
-    await scheduleTaskNotifications(task, false);
+    await cancelTaskNotifications(task.id);
+    const record = await createTaskNotifications(task, true);
+    await saveTaskRecord(task, record);
 } catch {
-    // No bloquear la carga de tareas si el sistema no permite notificaciones.
+    // Las notificaciones son una ayuda opcional del dispositivo.
 }
 }

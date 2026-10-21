@@ -5,18 +5,26 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '@/lib/supabase';
+import { useAppDispatch } from '@/store/hooks';
+import { clearTasks } from '@/store/slices/tasksSlice';
+import { clearAllTaskNotifications } from '@/services/taskNotificationsService';
 
 export default function PerfilScreen() {
 const router = useRouter();
+const dispatch = useAppDispatch();
 
 const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut({
+    scope: 'local',
+    });
 
     if (error) {
     Alert.alert('Error', 'No se pudo cerrar sesión.');
     return;
     }
 
+    dispatch(clearTasks());
+    await clearAllTaskNotifications();
     router.replace('/login');
 };
 

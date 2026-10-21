@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 import {
 cancelTaskNotifications,
-ensureTaskNotifications,
+reconcileTaskNotifications,
 rescheduleTaskNotifications,
 } from '@/services/taskNotificationsService';
 
@@ -40,12 +40,7 @@ const { data, error } = await supabase
 if (error) throw new Error(error.message);
 
 const tasks = (data ?? []) as TaskRecord[];
-
-await Promise.all(
-    tasks
-    .filter((task) => task.status === 'pending')
-    .map((task) => ensureTaskNotifications(task))
-);
+await reconcileTaskNotifications(userId, tasks);
 
 return tasks;
 }
