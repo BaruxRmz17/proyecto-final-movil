@@ -20,6 +20,18 @@ Record<string, StoredNotificationRecord>
 >;
 
 let handlerConfigured = false;
+let notificationOperationQueue: Promise<void> = Promise.resolve();
+
+function enqueueNotificationOperation(
+operation: () => Promise<void>
+): Promise<void> {
+const nextOperation = notificationOperationQueue
+    .then(operation, operation)
+    .catch(() => undefined);
+
+notificationOperationQueue = nextOperation;
+return nextOperation;
+}
 
 function configureNotificationHandler() {
 if (handlerConfigured || Platform.OS === 'web') return;
@@ -205,7 +217,7 @@ if (Object.keys(userState).length > 0) {
 await writeNotificationState(state);
 }
 
-export async function reconcileTaskNotifications(
+async function reconcileTaskNotificationsInternal(
 userId: string,
 tasks: TaskRecord[]
 ) {
@@ -298,7 +310,7 @@ try {
 }
 }
 
-export async function cancelTaskNotifications(taskId: string) {
+async function cancelTaskNotificationsInternal(taskId: string) {
 if (Platform.OS === 'web') return;
 
 try {
@@ -320,7 +332,7 @@ try {
 }
 }
 
-export async function clearAllTaskNotifications() {
+async function clearAllTaskNotificationsInternal() {
 if (Platform.OS === 'web') return;
 
 try {
@@ -361,16 +373,53 @@ try {
 }
 }
 
-export async function rescheduleTaskNotifications(
+async function rescheduleTaskNotificationsInternal(
 task: TaskRecord
 ) {
 if (Platform.OS === 'web') return;
 
 try {
-    await cancelTaskNotifications(task.id);
+    await cancelTaskNotificationsInternal(task.id);
     const record = await createTaskNotifications(task, true);
     await saveTaskRecord(task, record);
 } catch {
     // Las notificaciones son una ayuda opcional del dispositivo.
 }
+}
+
+export function reconcileTaskNotifications(
+userId: string,
+tasks: TaskRecord[]
+) {
+if (Platform.OS === 'web') return Promise.resolve();
+
+return enqueueNotificationOperation(() =>
+    reconcileTaskNotificationsInternal(userId, tasks)
+);
+}
+
+export function cancelTaskNotifications(taskId: string) {
+if (Platform.OS === 'web') return Promise.resolve();
+
+return enqueueNotificationOperation(() =>
+    cancelTaskNotificationsInternal(taskId)
+);
+}
+
+export function clearAllTaskNotifications() {
+if (Platform.OS === 'web') return Promise.resolve();
+
+return enqueueNotificationOperation(() =>
+    clearAllTaskNotificationsInternal()
+);
+}
+
+export function rescheduleTaskNotifications(
+task: TaskRecord
+) {
+if (Platform.OS === 'web') return Promise.resolve();
+
+return enqueueNotificationOperation(() =>
+    rescheduleTaskNotificationsInternal(task)
+);
 }

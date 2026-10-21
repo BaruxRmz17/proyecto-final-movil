@@ -40,7 +40,8 @@ const { data, error } = await supabase
 if (error) throw new Error(error.message);
 
 const tasks = (data ?? []) as TaskRecord[];
-await reconcileTaskNotifications(userId, tasks);
+// Supabase es la fuente de verdad; la reconciliación se recupera después.
+void reconcileTaskNotifications(userId, tasks);
 
 return tasks;
 }
@@ -63,7 +64,8 @@ const { data, error } = await supabase
 if (error) throw new Error(error.message);
 
 const task = data as TaskRecord;
-await rescheduleTaskNotifications(task);
+// Las notificaciones son un efecto secundario recuperable.
+void rescheduleTaskNotifications(task);
 
 return task;
 }
@@ -85,7 +87,8 @@ const { data, error } = await supabase
 if (error) throw new Error(error.message);
 
 const task = data as TaskRecord;
-await rescheduleTaskNotifications(task);
+// La actualización de la tarea no depende del sistema de notificaciones.
+void rescheduleTaskNotifications(task);
 
 return task;
 }
@@ -108,5 +111,6 @@ const { error } = await supabase
 
 if (error) throw new Error(error.message);
 
-await cancelTaskNotifications(id);
+// La eliminación en Supabase no debe fallar por una notificación pendiente.
+void cancelTaskNotifications(id);
 }

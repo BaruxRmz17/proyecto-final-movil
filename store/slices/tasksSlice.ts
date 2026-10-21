@@ -24,6 +24,7 @@ items: TaskRecord[];
 loading: boolean;
 saving: boolean;
 error: string | null;
+fetchRequestId: string | null;
 }
 
 const initialState: TasksState = {
@@ -31,6 +32,7 @@ items: [],
 loading: false,
 saving: false,
 error: null,
+fetchRequestId: null,
 };
 
 function errorMessage(error: unknown): string {
@@ -100,21 +102,37 @@ reducers: {
     state.loading = false;
     state.saving = false;
     state.error = null;
+    state.fetchRequestId = null;
     },
 },
 extraReducers: (builder) => {
     builder
-    .addCase(fetchTasks.pending, (state) => {
+    .addCase(fetchTasks.pending, (state, action) => {
         state.loading = true;
         state.error = null;
+        state.fetchRequestId = action.meta.requestId;
     })
     .addCase(fetchTasks.fulfilled, (state, action) => {
+        if (
+        state.fetchRequestId !== action.meta.requestId
+        ) {
+        return;
+        }
+
         state.loading = false;
         state.items = action.payload;
+        state.fetchRequestId = null;
     })
     .addCase(fetchTasks.rejected, (state, action) => {
+        if (
+        state.fetchRequestId !== action.meta.requestId
+        ) {
+        return;
+        }
+
         state.loading = false;
         state.error = errorMessage(action.error.message);
+        state.fetchRequestId = null;
     })
 
     .addCase(addTaskAsync.pending, (state) => {
