@@ -353,6 +353,36 @@ return (
                     </Text>
                 </View>
                 </View>
+
+                <Pressable
+                onPress={() => router.push('/calificaciones')}
+                accessibilityRole="button"
+                accessibilityLabel="Abrir mis calificaciones"
+                className="mt-5 flex-row items-center rounded-2xl bg-[#FAF9FF] p-4"
+                >
+                <View className="h-10 w-10 items-center justify-center rounded-xl bg-[#EDE6FF]">
+                    <Ionicons
+                    name="bar-chart-outline"
+                    size={20}
+                    color="#7957DC"
+                    />
+                </View>
+
+                <View className="ml-3 flex-1">
+                    <Text className="text-[12px] text-[#817995]">
+                    Rendimiento académico
+                    </Text>
+                    <Text className="mt-1 font-semibold text-[#292342]">
+                    Mis calificaciones
+                    </Text>
+                </View>
+
+                <Ionicons
+                    name="chevron-forward"
+                    size={20}
+                    color="#817995"
+                />
+                </Pressable>
             </View>
             </>
         ) : (

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 import {
 cancelTaskNotifications,
+getTaskNotificationStatuses as readTaskNotificationStatuses,
 reconcileTaskNotifications,
 rescheduleTaskNotifications,
 } from '@/services/taskNotificationsService';
@@ -34,6 +35,7 @@ const { data, error } = await supabase
     .from('tasks')
     .select('*')
     .eq('user_id', userId)
+    .eq('archived', false)
     .order('due_date', { ascending: true })
     .order('due_time', { ascending: true });
 
@@ -44,6 +46,30 @@ const tasks = (data ?? []) as TaskRecord[];
 void reconcileTaskNotifications(userId, tasks);
 
 return tasks;
+}
+
+export async function getTaskNotificationStatuses(
+tasks: TaskRecord[]
+): Promise<Record<string, boolean>> {
+const userId = await getCurrentUserId();
+
+return readTaskNotificationStatuses(userId, tasks);
+}
+
+export async function getGradedTasks(): Promise<TaskRecord[]> {
+const userId = await getCurrentUserId();
+
+const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .eq('user_id', userId)
+    .not('grade', 'is', null)
+    .order('class_id', { ascending: true })
+    .order('due_date', { ascending: true });
+
+if (error) throw new Error(error.message);
+
+return (data ?? []) as TaskRecord[];
 }
 
 export async function createTask(
@@ -98,6 +124,10 @@ id: string,
 status: TaskStatus
 ): Promise<TaskRecord> {
 return updateTask(id, { status });
+}
+
+export async function archiveTask(id: string): Promise<TaskRecord> {
+return updateTask(id, { archived: true });
 }
 
 export async function deleteTask(id: string): Promise<void> {

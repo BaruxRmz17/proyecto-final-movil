@@ -22,15 +22,20 @@ Record<string, StoredNotificationRecord>
 let handlerConfigured = false;
 let notificationOperationQueue: Promise<void> = Promise.resolve();
 
-function enqueueNotificationOperation(
-operation: () => Promise<void>
-): Promise<void> {
-const nextOperation = notificationOperationQueue
-    .then(operation, operation)
-    .catch(() => undefined);
+function enqueueNotificationOperation<T>(
+ operation: () => Promise<T>
+): Promise<T> {
+ const nextOperation = notificationOperationQueue.then(
+ operation,
+ operation
+ );
 
-notificationOperationQueue = nextOperation;
-return nextOperation;
+ notificationOperationQueue = nextOperation.then(
+ () => undefined,
+ () => undefined
+ );
+
+ return nextOperation;
 }
 
 function configureNotificationHandler() {
@@ -58,6 +63,40 @@ try {
 } catch {
     return {};
 }
+}
+
+async function getTaskNotificationStatusesInternal(
+ userId: string,
+ tasks: TaskRecord[]
+): Promise<Record<string, boolean>> {
+ if (Platform.OS === 'web') return {};
+
+ try {
+ const state = await readNotificationState();
+ const scheduled = await getManagedNotifications();
+ const scheduledIds = new Set(
+ scheduled.map((notification) => notification.identifier)
+ );
+ const userState = state[userId] ?? {};
+
+ return Object.fromEntries(
+ tasks.map((task) => {
+ const record = userState[task.id];
+ const active = Boolean(
+ record &&
+ task.status === 'pending' &&
+ record.fingerprint === getTaskFingerprint(task) &&
+ record.identifiers.every((identifier) =>
+ scheduledIds.has(identifier)
+ )
+ );
+
+ return [task.id, active];
+ })
+ );
+ } catch {
+ return {};
+ }
 }
 
 async function writeNotificationState(state: NotificationState) {
@@ -422,4 +461,15 @@ if (Platform.OS === 'web') return Promise.resolve();
 return enqueueNotificationOperation(() =>
     rescheduleTaskNotificationsInternal(task)
 );
+}
+
+export function getTaskNotificationStatuses(
+ userId: string,
+ tasks: TaskRecord[]
+) {
+ if (Platform.OS === 'web') return Promise.resolve({});
+
+ return enqueueNotificationOperation(() =>
+ getTaskNotificationStatusesInternal(userId, tasks)
+ );
 }

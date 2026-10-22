@@ -3,12 +3,13 @@ import { useCallback, useState } from 'react';
 import {
 ActivityIndicator,
 Image,
+Pressable,
 ScrollView,
 Text,
 View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { supabase } from '@/lib/supabase';
@@ -22,6 +23,7 @@ lavender: '#EDE6FF',
 };
 
 export default function HomeScreen() {
+const router = useRouter();
 const [nombre, setNombre] = useState('');
 const [loading, setLoading] = useState(true);
 
@@ -122,23 +124,36 @@ return (
         </View>
 
         {/* RESUMEN DEL DÍA */}
-        <View className="mt-9 rounded-[26px] bg-[#EDE6FF] px-6 py-7">
-        <View className="flex-row items-center">
+        <Pressable
+        onPress={() => router.push('/calificaciones')}
+        className="mt-9 rounded-[26px] bg-[#EDE6FF] px-6 py-7"
+        accessibilityRole="button"
+        accessibilityLabel="Abrir mis calificaciones"
+        >
+        <View className="flex-row items-center justify-between">
+            <View className="flex-1 flex-row items-center">
             <Ionicons
-            name="sparkles-outline"
+            name="bar-chart-outline"
             size={22}
             color={COLORS.primary}
             />
 
             <Text className="ml-3 text-[20px] font-extrabold text-[#292342]">
-            Tu día de un vistazo
+            Mis calificaciones
             </Text>
+            </View>
+
+            <Ionicons
+            name="chevron-forward"
+            size={22}
+            color={COLORS.primary}
+            />
         </View>
 
         <Text className="mt-5 text-[16px] text-[#7957DC]">
-            Tu información académica aparecerá aquí.
+            Consulta tu promedio y avance académico.
         </Text>
-        </View>
+        </Pressable>
 
         {/* PRÓXIMAS CLASES */}
         <View className="mt-12">

@@ -72,7 +72,7 @@ return (
             <Ionicons
             name={focused ? 'home' : 'home-outline'}
             size={23}
-            color={color}
+            color={typeof color === 'string' ? color : '#7957DC'}
             />
         ),
         }}
@@ -86,7 +86,7 @@ return (
             <Ionicons
             name={focused ? 'calendar' : 'calendar-outline'}
             size={23}
-            color={color}
+            color={typeof color === 'string' ? color : '#7957DC'}
             />
         ),
         }}
@@ -100,7 +100,7 @@ return (
             <Ionicons
             name={focused ? 'checkbox' : 'checkbox-outline'}
             size={23}
-            color={color}
+            color={typeof color === 'string' ? color : '#7957DC'}
             />
         ),
         }}
@@ -114,7 +114,7 @@ return (
             <Ionicons
             name={focused ? 'sparkles' : 'sparkles-outline'}
             size={23}
-            color={color}
+            color={typeof color === 'string' ? color : '#7957DC'}
             />
         ),
         }}
@@ -128,7 +128,7 @@ return (
             <Ionicons
             name={focused ? 'person' : 'person-outline'}
             size={23}
-            color={color}
+            color={typeof color === 'string' ? color : '#7957DC'}
             />
         ),
         }}

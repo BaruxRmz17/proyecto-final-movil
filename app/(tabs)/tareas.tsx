@@ -1,11 +1,18 @@
 
-import { useCallback, useEffect, useState } from 'react';
+import {
+Fragment,
+useCallback,
+useEffect,
+useState,
+} from 'react';
 import {
 ActivityIndicator,
 Alert,
 Pressable,
+RefreshControl,
 ScrollView,
 Text,
+TextInput,
 View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -105,6 +112,7 @@ const {
     tasks: items,
     loading,
     error,
+    notificationStatuses,
     refreshTasks,
     toggleTask,
 } = useTasks();
@@ -112,6 +120,8 @@ const {
 const { classes, refreshClasses } = useScheduleClasses();
 
 const [filter, setFilter] = useState<TaskFilter>('all');
+const [search, setSearch] = useState('');
+const [showFilters, setShowFilters] = useState(false);
 const [subjectFilter, setSubjectFilter] = useState<string | null>(
     null
 );
@@ -163,15 +173,29 @@ const filteredTasks = items
         !subjectFilter || task.class_id === subjectFilter;
         const matchesPriority =
         !priorityFilter || task.priority === priorityFilter;
+        const subject = classes.find(
+        (item) => item.id === task.class_id
+        );
+        const normalizedSearch = search.trim().toLowerCase();
+        const matchesSearch =
+        !normalizedSearch ||
+        task.title.toLowerCase().includes(normalizedSearch) ||
+        task.description?.toLowerCase().includes(normalizedSearch) ||
+        subject?.subject.toLowerCase().includes(normalizedSearch);
 
         return (
         matchesStatus &&
         matchesSubject &&
-        matchesPriority
+        matchesPriority &&
+        matchesSearch
         );
     }
     )
     .sort((a, b) => {
+    if (a.status !== b.status) {
+        return a.status === 'pending' ? -1 : 1;
+    }
+
     const dateOrder = a.due_date.localeCompare(b.due_date);
 
     return dateOrder !== 0
@@ -213,6 +237,14 @@ return (
         paddingBottom: 110,
         }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+        <RefreshControl
+            refreshing={loading && items.length > 0}
+            onRefresh={() => void refreshTasks()}
+            tintColor="#7957DC"
+            colors={['#7957DC']}
+        />
+        }
     >
         <View className="mb-7 flex-row items-center justify-between">
         <View className="flex-1">
@@ -225,13 +257,14 @@ return (
             </Text>
         </View>
 
-        <View className="h-14 w-14 items-center justify-center rounded-2xl bg-[#EDE6FF]">
-            <Ionicons
-            name="clipboard-outline"
-            size={27}
-            color="#7957DC"
-            />
-        </View>
+        <Pressable
+            onPress={() => router.push('/tareas/nueva')}
+            accessibilityRole="button"
+            accessibilityLabel="Crear nueva tarea"
+            className="h-14 w-14 items-center justify-center rounded-2xl bg-[#7957DC]"
+        >
+            <Ionicons name="add" size={29} color="white" />
+        </Pressable>
         </View>
 
         <View className="mb-8 flex-row gap-3">
@@ -257,6 +290,36 @@ return (
         />
         </View>
 
+        <View className="mb-5 flex-row items-center rounded-2xl bg-white px-4">
+        <Ionicons
+            name="search-outline"
+            size={21}
+            color="#817995"
+        />
+
+        <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Buscar por tarea o materia"
+            placeholderTextColor="#A9A2B9"
+            returnKeyType="search"
+            className="ml-3 min-h-[52px] flex-1 text-[14px] text-[#292342]"
+        />
+
+        {search ? (
+            <Pressable
+            onPress={() => setSearch('')}
+            accessibilityLabel="Limpiar búsqueda"
+            >
+            <Ionicons
+                name="close-circle"
+                size={20}
+                color="#A9A2B9"
+            />
+            </Pressable>
+        ) : null}
+        </View>
+
         <Text className="mb-4 text-[19px] font-bold text-[#292342]">
         Tus actividades
         </Text>
@@ -279,9 +342,27 @@ return (
             selected={filter === 'completed'}
             onPress={() => setFilter('completed')}
         />
+
+        <Pressable
+            onPress={() => setShowFilters((current) => !current)}
+            className={`flex-row items-center rounded-full px-4 py-3 ${
+            showFilters || subjectFilter || priorityFilter
+                ? 'bg-[#EDE6FF]'
+                : 'bg-white'
+            }`}
+        >
+            <Ionicons
+            name="options-outline"
+            size={16}
+            color="#7957DC"
+            />
+            <Text className="ml-2 text-[13px] font-semibold text-[#7957DC]">
+            Filtros
+            </Text>
+        </Pressable>
         </View>
 
-        {classes.length > 0 && (
+        {showFilters && classes.length > 0 && (
         <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -304,6 +385,7 @@ return (
         </ScrollView>
         )}
 
+        {showFilters && (
         <View className="mb-6 flex-row flex-wrap gap-2">
         <FilterButton
             label="Todas las prioridades"
@@ -322,6 +404,27 @@ return (
         )
         )}
         </View>
+        )}
+
+        {(subjectFilter || priorityFilter || search.trim()) && (
+        <Pressable
+            onPress={() => {
+            setSubjectFilter(null);
+            setPriorityFilter(null);
+            setSearch('');
+            }}
+            className="mb-5 flex-row items-center self-start"
+        >
+            <Ionicons
+            name="close-circle-outline"
+            size={17}
+            color="#7957DC"
+            />
+            <Text className="ml-2 text-[13px] font-bold text-[#7957DC]">
+            Limpiar filtros
+            </Text>
+        </Pressable>
+        )}
 
         {loading && items.length === 0 ? (
         <View className="items-center py-12">
@@ -359,15 +462,51 @@ return (
             </Text>
 
             <Text className="mt-2 text-center text-[13px] text-[#817995]">
-            {filter === 'all'
+            {items.length === 0
                 ? 'Crea tu primera tarea para comenzar.'
-                : 'No hay actividades en esta categoría.'}
+                : 'Prueba con otra búsqueda o limpia los filtros.'}
             </Text>
+
+            {items.length === 0 && (
+            <Pressable
+                onPress={() => router.push('/tareas/nueva')}
+                className="mt-5 rounded-xl bg-[#7957DC] px-5 py-3"
+            >
+                <Text className="font-bold text-white">
+                Crear tarea
+                </Text>
+            </Pressable>
+            )}
         </View>
         ) : (
-        filteredTasks.map((task) => {
+        filteredTasks.map((task, index) => {
             const done = task.status === 'completed';
             const overdue = isTaskOverdue(task, now);
+            const taskSection = done
+            ? 'completed'
+            : overdue
+                ? 'overdue'
+                : daysUntil(task, now) <= 3
+                ? 'upcoming'
+                : 'later';
+            const previousTask = filteredTasks[index - 1];
+            const previousSection = previousTask
+            ? previousTask.status === 'completed'
+                ? 'completed'
+                : isTaskOverdue(previousTask, now)
+                ? 'overdue'
+                : daysUntil(previousTask, now) <= 3
+                    ? 'upcoming'
+                    : 'later'
+            : null;
+            const sectionLabel =
+            taskSection === 'overdue'
+                ? 'Vencidas'
+                : taskSection === 'upcoming'
+                ? 'Próximas entregas'
+                : taskSection === 'later'
+                    ? 'Más adelante'
+                    : 'Completadas';
 
             const priority = PRIORITIES[task.priority];
 
@@ -376,8 +515,14 @@ return (
             );
 
             return (
+            <Fragment key={task.id}>
+            {taskSection !== previousSection && (
+                <Text className="mb-3 mt-2 text-[16px] font-bold text-[#292342]">
+                {sectionLabel}
+                </Text>
+            )}
+
             <Pressable
-                key={task.id}
                 onPress={() =>
                 router.push({
                     pathname: '/tareas/[id]',
@@ -489,29 +634,66 @@ return (
                         </Text>
                     </View>
 
-                    <Ionicons
+                    {task.grade !== null && (
+                        <View className="mr-2 flex-row items-center">
+                        <Ionicons
+                            name="ribbon-outline"
+                            size={15}
+                            color="#7957DC"
+                        />
+                        <Text className="ml-1 text-[11px] font-bold text-[#7957DC]">
+                            {task.grade}/{task.grade_max}
+                        </Text>
+                        </View>
+                    )}
+
+                    <View className="flex-row items-center">
+                        {!done && (
+                        <View className="mr-2 flex-row items-center">
+                            <Ionicons
+                            name={
+                                notificationStatuses[task.id]
+                                ? 'notifications-outline'
+                                : 'notifications-off-outline'
+                            }
+                            size={14}
+                            color={
+                                notificationStatuses[task.id]
+                                ? '#7957DC'
+                                : '#A9A2B9'
+                            }
+                            />
+                            <Text
+                            className="ml-1 text-[10px]"
+                            style={{
+                                color:
+                                notificationStatuses[task.id]
+                                    ? '#7957DC'
+                                    : '#A9A2B9',
+                            }}
+                            >
+                            {notificationStatuses[task.id]
+                                ? 'Aviso activo'
+                                : 'Sin aviso'}
+                            </Text>
+                        </View>
+                        )}
+
+                        <Ionicons
                         name="chevron-forward"
                         size={17}
                         color="#817995"
-                    />
+                        />
+                    </View>
                     </View>
                 </View>
                 </View>
             </Pressable>
+            </Fragment>
             );
         })
         )}
 
-        <Pressable
-        onPress={() => router.push('/tareas/nueva')}
-        className="mt-6 min-h-[56px] flex-row items-center justify-center rounded-2xl bg-[#7957DC]"
-        >
-        <Ionicons name="add" size={23} color="white" />
-
-        <Text className="ml-2 text-[16px] font-bold text-white">
-            Nueva tarea
-        </Text>
-        </Pressable>
     </ScrollView>
     </SafeAreaView>
 );

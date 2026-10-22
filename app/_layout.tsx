@@ -55,6 +55,15 @@ export default function RootLayout() {
             {/* Recuperación de contraseña */}
             <Stack.Screen name="forgot-password" />
 
+            {/* Calificaciones */}
+            <Stack.Screen
+              name="calificaciones"
+              options={{
+                headerShown: false,
+                presentation: 'card',
+              }}
+            />
+
             {/* Home con navegación inferior */}
             <Stack.Screen name="(tabs)" />
 

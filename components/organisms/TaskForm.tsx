@@ -103,6 +103,18 @@ const [dueTime, setDueTime] = useState(
     initialData?.due_time?.slice(0, 5) ?? ''
 );
 
+const [grade, setGrade] = useState(
+    initialData?.grade !== null && initialData?.grade !== undefined
+    ? String(initialData.grade)
+    : ''
+);
+
+const [gradeMax, setGradeMax] = useState(
+    initialData?.grade_max !== null && initialData?.grade_max !== undefined
+    ? String(initialData.grade_max)
+    : '100'
+);
+
 const [priority, setPriority] = useState<TaskPriority>(
     initialData?.priority ?? 'medium'
 );
@@ -155,6 +167,35 @@ const handleSubmit = async () => {
     return;
     }
 
+    const normalizedMax = gradeMax.trim().replace(',', '.');
+    const normalizedGrade = grade.trim().replace(',', '.');
+    const gradeMaxValue = normalizedMax
+    ? Number(normalizedMax)
+    : 100;
+    const gradeValue = normalizedGrade
+    ? Number(normalizedGrade)
+    : null;
+
+    if (
+    !Number.isFinite(gradeMaxValue) ||
+    gradeMaxValue <= 0
+    ) {
+    setError('La calificación máxima debe ser mayor que cero.');
+    return;
+    }
+
+    if (
+    gradeValue !== null &&
+    (!Number.isFinite(gradeValue) ||
+        gradeValue < 0 ||
+        gradeValue > gradeMaxValue)
+    ) {
+    setError(
+        'La calificación debe estar entre 0 y la calificación máxima.'
+    );
+    return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -164,6 +205,8 @@ const handleSubmit = async () => {
         class_id: selectedClass.id,
         due_date: dueDate,
         due_time: time || null,
+        grade: gradeValue,
+        grade_max: gradeMaxValue,
         priority,
     });
     } catch (err) {
@@ -441,6 +484,18 @@ return (
         />
         </Pressable>
 
+        {dueTime && (
+        <Pressable
+            onPress={() => setDueTime('')}
+            disabled={isBusy}
+            className="mt-2 self-end px-1 py-1"
+        >
+            <Text className="text-[12px] font-semibold text-[#7957DC]">
+            Quitar hora
+            </Text>
+        </Pressable>
+        )}
+
         {Platform.OS === 'android' && showTimePicker && (
         <DateTimePicker
             value={fromTimeString(dueTime)}
@@ -521,6 +576,61 @@ return (
             </Pressable>
         );
         })}
+    </View>
+
+    {/* Calificación opcional */}
+    <View className="mb-7 rounded-3xl bg-white p-5">
+        <View className="mb-2 flex-row items-center">
+        <Ionicons
+            name="ribbon-outline"
+            size={22}
+            color="#7957DC"
+        />
+
+        <Text className="ml-3 text-[17px] font-bold text-[#292342]">
+            Calificación
+        </Text>
+
+        <Text className="ml-2 text-[13px] text-[#817995]">
+            (opcional)
+        </Text>
+        </View>
+
+        <Text className="mb-4 text-[13px] leading-5 text-[#817995]">
+        Registra la nota cuando tu profesor te la entregue. Se usará para calcular tus promedios.
+        </Text>
+
+        <View className="flex-row gap-3">
+        <View className="flex-1">
+            <Text className="mb-2 text-[13px] font-semibold text-[#292342]">
+            Obtenida
+            </Text>
+            <TextInput
+            value={grade}
+            onChangeText={setGrade}
+            placeholder="Ej. 85"
+            placeholderTextColor="#A9A2B9"
+            keyboardType="decimal-pad"
+            maxLength={7}
+            className="min-h-[52px] rounded-2xl border border-[#EAE6F3] bg-[#FAF9FF] px-4 text-[#292342]"
+            />
+        </View>
+
+        <View className="flex-1">
+            <Text className="mb-2 text-[13px] font-semibold text-[#292342]">
+            De
+            </Text>
+            <TextInput
+            value={gradeMax}
+            onChangeText={setGradeMax}
+            placeholder="Ej. 100"
+            placeholderTextColor="#A9A2B9"
+            keyboardType="decimal-pad"
+            maxLength={7}
+            className="min-h-[52px] rounded-2xl border border-[#EAE6F3] bg-[#FAF9FF] px-4 text-[#292342]"
+            />
+        </View>
+        </View>
     </View>
 
     {/* Errores */}
