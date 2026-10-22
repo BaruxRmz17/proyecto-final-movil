@@ -16,13 +16,8 @@ useRouter,
 } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-fetchTasks,
-removeTaskAsync,
-toggleTaskAsync,
-} from '@/store/slices/tasksSlice';
 import { useScheduleClasses } from '@/hooks/useScheduleClasses';
+import { useTasks } from '@/hooks/useTasks';
 
 function formatDate(value: string): string {
 const [year, month, day] = value.split('-').map(Number);
@@ -37,11 +32,13 @@ return new Intl.DateTimeFormat('es-MX', {
 export default function TaskDetailScreen() {
 const { id } = useLocalSearchParams<{ id: string }>();
 const router = useRouter();
-const dispatch = useAppDispatch();
-
-const { items: tasks, loading } = useAppSelector(
-    (state) => state.tasks
-);
+const {
+    tasks,
+    loading,
+    refreshTasks,
+    toggleTask,
+    removeTask,
+} = useTasks();
 
 const { classes, refreshClasses } = useScheduleClasses();
 
@@ -49,9 +46,9 @@ const [busy, setBusy] = useState(false);
 
 useFocusEffect(
     useCallback(() => {
-    void dispatch(fetchTasks());
+    void refreshTasks();
     void refreshClasses();
-    }, [dispatch, refreshClasses])
+    }, [refreshTasks, refreshClasses])
 );
 
 const task = tasks.find((item) => item.id === id);
@@ -75,9 +72,7 @@ const handleDelete = () => {
             setBusy(true);
 
             try {
-            await dispatch(
-                removeTaskAsync(task.id)
-            ).unwrap();
+            await removeTask(task.id);
 
             router.replace('/(tabs)/tareas');
             } catch (error) {
@@ -102,7 +97,7 @@ const handleToggle = async () => {
     setBusy(true);
 
     try {
-    await dispatch(toggleTaskAsync(task)).unwrap();
+    await toggleTask(task);
     } catch (error) {
     Alert.alert(
         'Error',

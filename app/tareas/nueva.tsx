@@ -12,16 +12,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TaskForm } from '@/components/organisms/TaskForm';
 import { useScheduleClasses } from '@/hooks/useScheduleClasses';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import { addTaskAsync } from '@/store/slices/tasksSlice';
+import { useTasks } from '@/hooks/useTasks';
 
 export default function NewTaskScreen() {
 const router = useRouter();
-const dispatch = useAppDispatch();
-
-const { saving } = useAppSelector(
-    (state) => state.tasks
-);
+const { saving, addTask } = useTasks();
 
 const {
     classes,
@@ -77,7 +72,7 @@ return (
         saving={saving}
         onCancel={() => router.back()}
         onSubmit={async (input) => {
-            await dispatch(addTaskAsync(input)).unwrap();
+            await addTask(input);
 
             Alert.alert(
             'Tarea creada',

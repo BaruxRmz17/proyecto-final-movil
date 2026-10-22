@@ -13,12 +13,8 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useScheduleClasses } from '@/hooks/useScheduleClasses';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
+import { useTasks } from '@/hooks/useTasks';
 import { getTaskDueDate } from '@/utils/taskDates';
-import {
-fetchTasks,
-toggleTaskAsync,
-} from '@/store/slices/tasksSlice';
 
 import type {
 TaskFilter,
@@ -105,11 +101,13 @@ return `Entrega · ${formatDate(task.due_date)}${time}`;
 
 export default function TareasScreen() {
 const router = useRouter();
-const dispatch = useAppDispatch();
-
-const { items, loading, error } = useAppSelector(
-    (state) => state.tasks
-);
+const {
+    tasks: items,
+    loading,
+    error,
+    refreshTasks,
+    toggleTask,
+} = useTasks();
 
 const { classes, refreshClasses } = useScheduleClasses();
 
@@ -132,9 +130,9 @@ useEffect(() => {
 
 useFocusEffect(
     useCallback(() => {
-    void dispatch(fetchTasks());
+    void refreshTasks();
     void refreshClasses();
-    }, [dispatch, refreshClasses])
+    }, [refreshTasks, refreshClasses])
 );
 
 const pending = items.filter(
@@ -189,7 +187,7 @@ const handleToggle = async (task: TaskRecord) => {
     setUpdatingId(task.id);
 
     try {
-    await dispatch(toggleTaskAsync(task)).unwrap();
+    await toggleTask(task);
     } catch (err) {
     Alert.alert(
         'Error al actualizar',
@@ -340,7 +338,7 @@ return (
             <Text className="text-red-600">{error}</Text>
 
             <Pressable
-            onPress={() => void dispatch(fetchTasks())}
+            onPress={() => void refreshTasks()}
             className="mt-4 rounded-xl bg-white p-3"
             >
             <Text className="text-center font-bold text-[#7957DC]">

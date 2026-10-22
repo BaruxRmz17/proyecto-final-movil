@@ -16,20 +16,18 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { TaskForm } from '@/components/organisms/TaskForm';
 import { useScheduleClasses } from '@/hooks/useScheduleClasses';
-import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-editTaskAsync,
-fetchTasks,
-} from '@/store/slices/tasksSlice';
+import { useTasks } from '@/hooks/useTasks';
 
 export default function EditTaskScreen() {
 const router = useRouter();
 const { id } = useLocalSearchParams<{ id: string }>();
-const dispatch = useAppDispatch();
-
-const { items, loading, saving } = useAppSelector(
-    (state) => state.tasks
-);
+const {
+    tasks,
+    loading,
+    saving,
+    refreshTasks,
+    editTask,
+} = useTasks();
 
 const {
     classes,
@@ -39,12 +37,12 @@ const {
 
 useFocusEffect(
     useCallback(() => {
-    void dispatch(fetchTasks());
+    void refreshTasks();
     void refreshClasses();
-    }, [dispatch, refreshClasses])
+    }, [refreshTasks, refreshClasses])
 );
 
-const task = items.find((item) => item.id === id);
+const task = tasks.find((item) => item.id === id);
 
 if ((loading || loadingClasses) && !task) {
     return (
@@ -86,12 +84,7 @@ return (
         saving={saving}
         onCancel={() => router.back()}
         onSubmit={async (input) => {
-            await dispatch(
-            editTaskAsync({
-                id: task.id,
-                input,
-            })
-            ).unwrap();
+            await editTask(task.id, input);
 
             Alert.alert(
             'Cambios guardados',
