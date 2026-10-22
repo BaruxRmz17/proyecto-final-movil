@@ -19,6 +19,10 @@ El proyecto está construido con React Native y Expo, con Expo Router para la na
 - Recordatorios locales de entrega en el dispositivo.
 - Selector de fechas nativo para Android y iOS.
 - Mostrar u ocultar la contraseña desde el formulario de autenticación.
+- Registro opcional de calificaciones por tarea.
+- Promedio general y promedio por materia.
+- Archivado de tareas completadas.
+- Personalización de la tarjeta de estudiante.
 
 La sección de IA todavía está en desarrollo.
 
@@ -28,6 +32,7 @@ La sección de IA todavía está en desarrollo.
 - Android Studio y un emulador o dispositivo Android para Android.
 - Xcode y CocoaPods para iOS.
 - Un proyecto de Supabase configurado.
+- Expo SDK 58 y Expo Go compatible con SDK 58 para pruebas en dispositivo.
 
 ## Instalación
 
@@ -114,6 +119,9 @@ Campos principales:
 - `due_time`
 - `priority` (`low`, `medium` o `high`)
 - `status` (`pending` o `completed`)
+- `grade` como calificación obtenida, opcional.
+- `grade_max` como puntuación máxima, por defecto `100`.
+- `archived` para ocultar tareas completadas de la lista principal.
 - `created_at`
 - `updated_at`
 
@@ -123,10 +131,12 @@ La base de datos debe tener:
 - Policies para que cada usuario solo pueda consultar y modificar sus propios registros.
 - Una restricción que garantice que `end_time` sea posterior a `start_time`.
 - La migración `supabase/migrations/20261021215647_tasks_rls_and_indexes.sql` contiene las policies e índice de consulta de tareas.
+- La migración `supabase/migrations/20261022204918_task_archiving.sql` agrega el archivado de tareas.
+- La migración `supabase/migrations/20261022225000_task_grades.sql` agrega calificaciones y su validación.
 - Un trigger que actualice automáticamente `updated_at`.
 - Un trigger de registro de usuario si se desea crear automáticamente la fila correspondiente en `profiles`.
 
-La configuración SQL se administra actualmente desde Supabase. Se recomienda convertirla en migraciones versionadas dentro del repositorio antes de desplegar a producción.
+Si no utilizas Supabase CLI, ejecuta el contenido de las migraciones nuevas desde el SQL Editor de Supabase antes de probar archivado y calificaciones.
 
 ## Estructura del proyecto
 
@@ -135,16 +145,17 @@ app/                 Rutas y pantallas de Expo Router
   (tabs)/            Navegación principal de la aplicación
   horario/           Lista, creación y detalle de clases
   tareas/            Lista, creación, edición y detalle de tareas
+  calificaciones/    Promedio general y calificaciones por materia
 components/
   atoms/             Componentes pequeños reutilizables
   molecules/         Componentes compuestos
   organisms/         Formularios y bloques funcionales
   templates/         Composición de pantallas
 hooks/               Estado y lógica reutilizable
-services/            Acceso a Supabase y AsyncStorage
+services/            Acceso a Supabase, AsyncStorage y notificaciones
 types/               Tipos de TypeScript
 utils/               Validaciones, fechas y conflictos de horario
-lib/                 Clientes y utilidades compartidas
+lib/                 Clientes, SecureStore y utilidades compartidas
 theme/               Colores y configuración visual
 assets/              Imágenes e iconos
 ```

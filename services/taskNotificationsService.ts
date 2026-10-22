@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { AndroidImportance } from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import type { TaskRecord } from '@/types/tasks';
@@ -182,7 +183,7 @@ configureNotificationHandler();
 if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('tasks', {
     name: 'Tareas',
-    importance: Notifications.AndroidImportance.DEFAULT,
+    importance: AndroidImportance.DEFAULT,
     });
 }
 
