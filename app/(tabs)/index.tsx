@@ -155,6 +155,38 @@ return (
         </Text>
         </Pressable>
 
+        {/* ESTADÍSTICAS */}
+        <Pressable
+        onPress={() => router.push('/estadisticas')}
+        className="mt-5 rounded-[26px] bg-white px-6 py-7"
+        accessibilityRole="button"
+        accessibilityLabel="Abrir mis estadísticas"
+        >
+        <View className="flex-row items-center justify-between">
+            <View className="flex-1 flex-row items-center">
+            <Ionicons
+                name="stats-chart-outline"
+                size={22}
+                color={COLORS.primary}
+            />
+
+            <Text className="ml-3 text-[20px] font-extrabold text-[#292342]">
+                Mis estadísticas
+            </Text>
+            </View>
+
+            <Ionicons
+            name="chevron-forward"
+            size={22}
+            color={COLORS.primary}
+            />
+        </View>
+
+        <Text className="mt-5 text-[16px] text-[#7957DC]">
+            Revisa tu avance, tareas y rendimiento.
+        </Text>
+        </Pressable>
+
         {/* PRÓXIMAS CLASES */}
         <View className="mt-12">
         <Text className="text-[24px] font-extrabold text-[#292342]">

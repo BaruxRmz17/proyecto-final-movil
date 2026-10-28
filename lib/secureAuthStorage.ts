@@ -5,6 +5,12 @@ import { Platform } from 'react-native';
 const KEY_PREFIX = 'campus-mind-auth';
 const MAX_SECURE_VALUE_BYTES = 1800;
 
+// Expo Router renders routes once in Node during web development/builds.
+// AsyncStorage's web adapter delegates to window.localStorage, which does
+// not exist during that server render.
+const isWebServer =
+  Platform.OS === 'web' && typeof window === 'undefined';
+
 function getKeyName(key: string, suffix: string): string {
 return `${KEY_PREFIX}-${encodeURIComponent(key).replace(
     /%/g,
@@ -136,6 +142,7 @@ await SecureStore.deleteItemAsync(
 export const authStorage = {
 async getItem(key: string): Promise<string | null> {
     if (Platform.OS === 'web') {
+    if (isWebServer) return null;
     return AsyncStorage.getItem(key);
     }
 
@@ -160,6 +167,7 @@ async getItem(key: string): Promise<string | null> {
 
 async setItem(key: string, value: string): Promise<void> {
     if (Platform.OS === 'web') {
+    if (isWebServer) return;
     await AsyncStorage.setItem(key, value);
     return;
     }
@@ -170,6 +178,7 @@ async setItem(key: string, value: string): Promise<void> {
 
 async removeItem(key: string): Promise<void> {
     if (Platform.OS === 'web') {
+    if (isWebServer) return;
     await AsyncStorage.removeItem(key);
     return;
     }
