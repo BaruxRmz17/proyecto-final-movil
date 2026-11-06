@@ -1,8 +1,7 @@
 import type { Message } from '@/types/ai';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const DEFAULT_MODEL = 'openai/gpt-oss-20b';
-const RETIRED_MODELS = new Set(['llama-3.1-8b-instant', 'llama-3.3-70b-versatile']);
+const DEFAULT_MODEL = 'llama-3.1-8b-instant';
 
 function getApiKey(): string {
   const key = process.env.EXPO_PUBLIC_GROQ_API_KEY?.trim();
@@ -26,11 +25,7 @@ export async function askGroq(
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model:
-        process.env.EXPO_PUBLIC_GROQ_MODEL &&
-        !RETIRED_MODELS.has(process.env.EXPO_PUBLIC_GROQ_MODEL)
-          ? process.env.EXPO_PUBLIC_GROQ_MODEL
-          : DEFAULT_MODEL,
+      model: process.env.EXPO_PUBLIC_GROQ_MODEL || DEFAULT_MODEL,
       temperature: 0.25,
       max_tokens: 350,
       top_p: 0.9,
