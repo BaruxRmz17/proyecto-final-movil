@@ -19,7 +19,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash.png",
+          "image": "./assets/images/campus-mind-logo.png",
           "backgroundColor": "#ffffff"
         }
       ],
@@ -84,11 +84,25 @@
       "bundleIdentifier": "com.baruxx.campusmind"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "package": "com.baruxx.campusmind"
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "c860499b-ed07-428e-a53d-711dfa8ef85e"
+      }
     }
   }
 }

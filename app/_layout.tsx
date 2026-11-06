@@ -1,4 +1,3 @@
-
 import '@/global.css';
 
 import { useEffect } from 'react';
@@ -8,6 +7,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Appearance } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Redux
 import { Provider } from 'react-redux';
@@ -29,71 +29,72 @@ export default function RootLayout() {
 
   return (
     <Provider store={store}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <NavThemeProvider value={NAV_THEME[colorScheme]}>
-          {/* Barra de estado del celular */}
-          <StatusBar style="dark" />
+      <SafeAreaProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <NavThemeProvider value={NAV_THEME[colorScheme]}>
+            {/* Barra de estado del celular */}
+            <StatusBar style="dark" />
 
-          {/* Navegación principal de Campus Mind */}
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: {
-                backgroundColor: '#FAF9FF',
-              },
-            }}
-          >
-            {/* Pantalla de bienvenida */}
-            <Stack.Screen name="index" />
-
-            {/* Inicio de sesión */}
-            <Stack.Screen name="login" />
-
-            {/* Registro de usuarios */}
-            <Stack.Screen name="register" />
-
-            {/* Recuperación de contraseña */}
-            <Stack.Screen name="forgot-password" />
-
-            {/* Calificaciones */}
-            <Stack.Screen
-              name="calificaciones"
-              options={{
+            {/* Navegación principal de Campus Mind */}
+            <Stack
+              screenOptions={{
                 headerShown: false,
-                presentation: 'card',
-              }}
-            />
+                contentStyle: {
+                  backgroundColor: '#FAF9FF',
+                },
+              }}>
+              {/* Pantalla de bienvenida */}
+              <Stack.Screen name="index" />
 
-            {/* Home con navegación inferior */}
-            <Stack.Screen name="(tabs)" />
+              {/* Inicio de sesión */}
+              <Stack.Screen name="login" />
 
-            {/* Crear tarea */}
-            <Stack.Screen
-              name="tareas/nueva"
-              options={{
-                headerShown: false,
-                presentation: 'card',
-              }}
-            />
+              {/* Registro de usuarios */}
+              <Stack.Screen name="register" />
 
-            {/* Consultar detalle de tarea */}
-            <Stack.Screen
-              name="tareas/[id]"
-              options={{
-                headerShown: false,
-              }}
-            />
+              {/* Recuperación de contraseña */}
+              <Stack.Screen name="forgot-password" />
 
-            {/* Editar tarea */}
-            <Stack.Screen
-              name="tareas/editar"
-              options={{
-                headerShown: false,
-              }}
-            />
-          </Stack>
-        </NavThemeProvider>
-      </GestureHandlerRootView>
+              {/* Calificaciones */}
+              <Stack.Screen
+                name="calificaciones"
+                options={{
+                  headerShown: false,
+                  presentation: 'card',
+                }}
+              />
+
+              {/* Home con navegación inferior */}
+              <Stack.Screen name="(tabs)" />
+
+              {/* Crear tarea */}
+              <Stack.Screen
+                name="tareas/nueva"
+                options={{
+                  headerShown: false,
+                  presentation: 'card',
+                }}
+              />
+
+              {/* Consultar detalle de tarea */}
+              <Stack.Screen
+                name="tareas/[id]"
+                options={{
+                  headerShown: false,
+                }}
+              />
+
+              {/* Editar tarea */}
+              <Stack.Screen
+                name="tareas/editar"
+                options={{
+                  headerShown: false,
+                }}
+              />
+            </Stack>
+          </NavThemeProvider>
+        </GestureHandlerRootView>
+      </SafeAreaProvider>
     </Provider>
   );
 }

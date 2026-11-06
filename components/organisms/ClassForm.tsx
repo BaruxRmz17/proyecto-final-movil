@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ColorChip, CLASS_COLORS } from '@/components/atoms/ColorChip';
@@ -180,15 +189,18 @@ export function ClassForm({
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-[#FAF9FF]"
-      keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
-      contentContainerStyle={{
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 45,
-      }}>
+    <KeyboardAvoidingView
+      className="flex-1"
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <ScrollView
+        className="flex-1 bg-[#FAF9FF]"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingHorizontal: 24,
+          paddingTop: 24,
+          paddingBottom: 45,
+        }}>
       <Text className="text-[28px] font-extrabold text-[#292342]">
         {editing ? 'Editar clase' : 'Nueva clase'}
       </Text>
@@ -436,7 +448,8 @@ export function ClassForm({
         className="mt-4 min-h-[52px] items-center justify-center rounded-2xl bg-[#EDE6FF]">
         <Text className="text-[15px] font-bold text-[#7957DC]">Cancelar</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

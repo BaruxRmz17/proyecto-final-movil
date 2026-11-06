@@ -1,9 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -19,23 +14,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-import {
-  getScheduleClasses,
-  type ScheduleClassRecord,
-} from '@/services/scheduleClassesService';
+import { askGroq } from '@/lib/groq';
+import { getScheduleClasses, type ScheduleClassRecord } from '@/services/scheduleClassesService';
+import { getProfile } from '@/services/profileService';
 import { getTasks } from '@/services/tasksService';
+import type { Message } from '@/types/ai';
 import type { TaskRecord } from '@/types/tasks';
 
 const COLORS = {
   muted: '#817995',
   primary: '#7957DC',
 };
-
-interface Message {
-  id: string;
-  role: 'assistant' | 'user';
-  text: string;
-}
 
 function formatDate(value: string): string {
   const [year, month, day] = value.split('-').map(Number);
@@ -44,6 +33,55 @@ function formatDate(value: string): string {
     day: 'numeric',
     month: 'short',
   }).format(new Date(year, month - 1, day));
+}
+
+function buildContext(
+  tasks: TaskRecord[],
+  classes: ScheduleClassRecord[],
+  profile: Awaited<ReturnType<typeof getProfile>> | null
+): string {
+  const compactTasks = tasks.slice(0, 40).map((task) => ({
+    título: task.title,
+    materia: classes.find((item) => item.id === task.class_id)?.subject ?? 'Sin materia',
+    entrega: task.due_date,
+    hora: task.due_time,
+    estado: task.status,
+    prioridad: task.priority,
+    calificación: task.grade,
+    máximo: task.grade_max,
+    descripción: task.description?.slice(0, 160) || undefined,
+  }));
+
+  const compactClasses = classes.slice(0, 30).map((item) => ({
+    materia: item.subject,
+    profesor: item.teacher || undefined,
+    salón: item.classroom || undefined,
+    días: item.days,
+    horario: `${item.start_time}-${item.end_time}`,
+  }));
+
+  return JSON.stringify(
+    {
+      estudiante: profile?.profile
+        ? {
+            nombre: profile.profile.nombre_completo,
+            universidad: profile.profile.universidad,
+            carrera: profile.profile.carrera,
+            semestre: profile.profile.semestre,
+          }
+        : null,
+      resumen: {
+        total_tareas: tasks.length,
+        pendientes: tasks.filter((task) => task.status === 'pending').length,
+        completadas: tasks.filter((task) => task.status === 'completed').length,
+        calificadas: tasks.filter((task) => task.grade !== null).length,
+      },
+      materias: compactClasses,
+      tareas: compactTasks,
+    },
+    null,
+    0
+  );
 }
 
 function getLocalAnswer(
@@ -71,10 +109,7 @@ function getLocalAnswer(
 
     const preview = pending
       .slice(0, 3)
-      .map(
-        (task, index) =>
-          `${index + 1}. ${task.title} — ${formatDate(task.due_date)}`
-      )
+      .map((task, index) => `${index + 1}. ${task.title} — ${formatDate(task.due_date)}`)
       .join('\n');
 
     return `Tienes ${pending.length} tarea${pending.length === 1 ? '' : 's'} pendiente${pending.length === 1 ? '' : 's'}. Te recomiendo empezar por la entrega más cercana:\n\n${preview}`;
@@ -97,9 +132,7 @@ function getLocalAnswer(
   }
 
   if (/estadística|estadistica|avance|progreso/.test(normalized)) {
-    const completed = tasks.filter(
-      (task) => task.status === 'completed'
-    ).length;
+    const completed = tasks.filter((task) => task.status === 'completed').length;
     const progress = tasks.length ? (completed / tasks.length) * 100 : 0;
 
     return `Has completado ${completed} de ${tasks.length} tareas, un avance del ${progress.toFixed(0)}%.`;
@@ -111,6 +144,7 @@ function getLocalAnswer(
 export default function IaScreen() {
   const [tasks, setTasks] = useState<TaskRecord[]>([]);
   const [classes, setClasses] = useState<ScheduleClassRecord[]>([]);
+  const [profile, setProfile] = useState<Awaited<ReturnType<typeof getProfile>> | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [input, setInput] = useState('');
@@ -133,12 +167,14 @@ export default function IaScreen() {
     setLoading(true);
 
     try {
-      const [taskData, classData] = await Promise.all([
+      const [taskData, classData, profileData] = await Promise.all([
         getTasks(),
         getScheduleClasses(),
+        getProfile(),
       ]);
       setTasks(taskData);
       setClasses(classData);
+      setProfile(profileData);
     } catch {
       // El chat puede funcionar con el contexto vacío.
     } finally {
@@ -231,33 +267,45 @@ export default function IaScreen() {
         },
       ]);
 
-      await new Promise((resolve) => setTimeout(resolve, 350));
+      try {
+        const previousMessages = messages.filter((message) => message.id !== 'welcome').slice(-6);
+        const answer = await askGroq(
+          question,
+          buildContext(tasks, classes, profile),
+          previousMessages
+        );
 
-      setMessages((current) => [
-        ...current,
-        {
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          text: getLocalAnswer(question, tasks, classes),
-        },
-      ]);
+        setMessages((current) => [
+          ...current,
+          { id: `assistant-${Date.now()}`, role: 'assistant', text: answer },
+        ]);
+      } catch (error) {
+        setMessages((current) => [
+          ...current,
+          {
+            id: `assistant-${Date.now()}`,
+            role: 'assistant',
+            text:
+              error instanceof Error && error.message.includes('EXPO_PUBLIC_GROQ_API_KEY')
+                ? 'Conecta tu API key de Groq en .env como EXPO_PUBLIC_GROQ_API_KEY y reinicia Expo para activar mi cerebro completo.'
+                : getLocalAnswer(question, tasks, classes),
+          },
+        ]);
+      }
       setSending(false);
     },
-    [classes, input, removeUsedSuggestion, sendScale, sending, tasks]
+    [classes, input, messages, profile, removeUsedSuggestion, sendScale, sending, tasks]
   );
 
   return (
     <SafeAreaView className="flex-1 bg-[#FAF9FF]" edges={['top']}>
       <KeyboardAvoidingView
         className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View className="px-6 pb-4 pt-7">
           <View className="flex-row items-center justify-between">
             <View>
-              <Text className="text-[30px] font-extrabold text-[#292342]">
-                Agente IA
-              </Text>
+              <Text className="text-[30px] font-extrabold text-[#292342]">Agente IA</Text>
               <Text className="mt-2 text-[14px] text-[#817995]">
                 Tu asistente académico de Campus Mind
               </Text>
@@ -271,16 +319,13 @@ export default function IaScreen() {
         {loading ? (
           <View className="flex-1 items-center justify-center">
             <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text className="mt-4 text-[#817995]">
-              Preparando tu contexto...
-            </Text>
+            <Text className="mt-4 text-[#817995]">Preparando tu contexto...</Text>
           </View>
         ) : (
           <ScrollView
             className="flex-1 px-6"
             contentContainerStyle={{ paddingBottom: 20 }}
-            showsVerticalScrollIndicator={false}
-          >
+            showsVerticalScrollIndicator={false}>
             {messages.map((message) => (
               <Animated.View
                 key={message.id}
@@ -288,15 +333,11 @@ export default function IaScreen() {
                   message.role === 'user'
                     ? 'self-end rounded-br-md bg-[#7957DC]'
                     : 'self-start rounded-bl-md bg-white'
-                }`}
-              >
+                }`}>
                 <Text
                   className={`text-[15px] leading-6 ${
-                    message.role === 'user'
-                      ? 'text-white'
-                      : 'text-[#292342]'
-                  }`}
-                >
+                    message.role === 'user' ? 'text-white' : 'text-[#292342]'
+                  }`}>
                   {message.text}
                 </Text>
               </Animated.View>
@@ -315,8 +356,7 @@ export default function IaScreen() {
                     },
                   ],
                 }}
-                className="mb-4 self-start rounded-3xl rounded-bl-md bg-white px-5 py-4"
-              >
+                className="mb-4 self-start rounded-3xl rounded-bl-md bg-white px-5 py-4">
                 <View className="flex-row items-center gap-1">
                   <View className="h-2 w-2 rounded-full bg-[#7957DC]" />
                   <View className="h-2 w-2 rounded-full bg-[#A995EF]" />
@@ -333,11 +373,8 @@ export default function IaScreen() {
                 <Pressable
                   key={suggestion}
                   onPress={() => void sendMessage(suggestion)}
-                  className="rounded-2xl bg-[#EDE6FF] px-4 py-3"
-                >
-                  <Text className="text-[12px] font-semibold text-[#7957DC]">
-                    {suggestion}
-                  </Text>
+                  className="rounded-2xl bg-[#EDE6FF] px-4 py-3">
+                  <Text className="text-[12px] font-semibold text-[#7957DC]">{suggestion}</Text>
                 </Pressable>
               ))}
             </View>
@@ -358,15 +395,14 @@ export default function IaScreen() {
               editable={!loading && !sending}
             />
             <Animated.View style={{ transform: [{ scale: sendScale }] }}>
-            <Pressable
-              onPress={() => void sendMessage()}
-              disabled={!input.trim() || sending}
-              accessibilityRole="button"
-              accessibilityLabel="Enviar mensaje"
-              className="ml-2 h-11 w-11 items-center justify-center rounded-2xl bg-[#7957DC] disabled:opacity-40"
-            >
-              <Ionicons name="arrow-up" size={21} color="white" />
-            </Pressable>
+              <Pressable
+                onPress={() => void sendMessage()}
+                disabled={!input.trim() || sending}
+                accessibilityRole="button"
+                accessibilityLabel="Enviar mensaje"
+                className="ml-2 h-11 w-11 items-center justify-center rounded-2xl bg-[#7957DC] disabled:opacity-40">
+                <Ionicons name="arrow-up" size={21} color="white" />
+              </Pressable>
             </Animated.View>
           </View>
         </View>

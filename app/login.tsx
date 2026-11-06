@@ -115,7 +115,7 @@ return (
     <KeyboardAvoidingView
         className="flex-1"
         behavior={
-        Platform.OS === 'ios' ? 'padding' : undefined
+        Platform.OS === 'ios' ? 'padding' : 'height'
         }
     >
         <ScrollView

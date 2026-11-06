@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import {
 ActivityIndicator,
+KeyboardAvoidingView,
 Platform,
 Pressable,
 ScrollView,
@@ -221,15 +222,19 @@ const handleSubmit = async () => {
 };
 
 return (
+    <KeyboardAvoidingView
+    className="flex-1"
+    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
     <ScrollView
-    className="flex-1 bg-[#FAF9FF]"
-    keyboardShouldPersistTaps="handled"
-    showsVerticalScrollIndicator={false}
-    contentContainerStyle={{
-        paddingHorizontal: 24,
-        paddingTop: 24,
-        paddingBottom: 45,
-    }}
+        className="flex-1 bg-[#FAF9FF]"
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 45,
+        }}
     >
     {/* Encabezado */}
     <Text className="text-[28px] font-extrabold text-[#292342]">
@@ -687,5 +692,6 @@ return (
         </Text>
     </Pressable>
     </ScrollView>
+    </KeyboardAvoidingView>
 );
 }

@@ -1,138 +1,138 @@
-
 import { Tabs, Redirect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Platform, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Session } from '@supabase/supabase-js';
 
 import { supabase } from '@/lib/supabase';
 
 export default function TabsLayout() {
-const [session, setSession] = useState<Session | null>(null);
-const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
+  const androidBottomInset = Platform.OS === 'android' ? insets.bottom : 0;
 
-useEffect(() => {
+  useEffect(() => {
     let mounted = true;
 
     supabase.auth.getSession().then(({ data }) => {
-    if (mounted) {
+      if (mounted) {
         setSession(data.session);
         setLoading(false);
-    }
+      }
     });
 
-    const { data: listener } =
-    supabase.auth.onAuthStateChange((_event, nextSession) => {
-        setSession(nextSession);
-        setLoading(false);
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+      setLoading(false);
     });
 
     return () => {
-    mounted = false;
-    listener.subscription.unsubscribe();
+      mounted = false;
+      listener.subscription.unsubscribe();
     };
-}, []);
+  }, []);
 
-if (loading) {
+  if (loading) {
     return (
-    <View className="flex-1 items-center justify-center bg-[#FAF9FF]">
+      <View className="flex-1 items-center justify-center bg-[#FAF9FF]">
         <ActivityIndicator size="large" color="#7957DC" />
-    </View>
+      </View>
     );
-}
+  }
 
-if (!session) {
+  if (!session) {
     return <Redirect href="/login" />;
-}
+  }
 
-return (
+  return (
     <Tabs
-    screenOptions={{
+      screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#7957DC',
         tabBarInactiveTintColor: '#817995',
         tabBarStyle: {
-        backgroundColor: '#FFFFFF',
-        borderTopWidth: 0,
-        height: 85,
-        paddingTop: 10,
-        paddingBottom: 22,
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 0,
+          height: 85 + androidBottomInset,
+          paddingTop: 10,
+          paddingBottom: 22 + androidBottomInset,
         },
         tabBarLabelStyle: {
-        fontSize: 11,
-        fontWeight: '600',
+          fontSize: 11,
+          fontWeight: '600',
         },
-    }}
-    >
-    <Tabs.Screen
+      }}>
+      <Tabs.Screen
         name="index"
         options={{
-        title: 'Inicio',
-        tabBarIcon: ({ color, focused }) => (
+          title: 'Inicio',
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-            name={focused ? 'home' : 'home-outline'}
-            size={23}
-            color={typeof color === 'string' ? color : '#7957DC'}
+              name={focused ? 'home' : 'home-outline'}
+              size={23}
+              color={typeof color === 'string' ? color : '#7957DC'}
             />
-        ),
+          ),
         }}
-    />
+      />
 
-    <Tabs.Screen
+      <Tabs.Screen
         name="horario"
         options={{
-        title: 'Horario',
-        tabBarIcon: ({ color, focused }) => (
+          title: 'Horario',
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-            name={focused ? 'calendar' : 'calendar-outline'}
-            size={23}
-            color={typeof color === 'string' ? color : '#7957DC'}
+              name={focused ? 'calendar' : 'calendar-outline'}
+              size={23}
+              color={typeof color === 'string' ? color : '#7957DC'}
             />
-        ),
+          ),
         }}
-    />
+      />
 
-    <Tabs.Screen
+      <Tabs.Screen
         name="tareas"
         options={{
-        title: 'Tareas',
-        tabBarIcon: ({ color, focused }) => (
+          title: 'Tareas',
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-            name={focused ? 'checkbox' : 'checkbox-outline'}
-            size={23}
-            color={typeof color === 'string' ? color : '#7957DC'}
+              name={focused ? 'checkbox' : 'checkbox-outline'}
+              size={23}
+              color={typeof color === 'string' ? color : '#7957DC'}
             />
-        ),
+          ),
         }}
-    />
+      />
 
-    <Tabs.Screen
+      <Tabs.Screen
         name="ia"
         options={{
-        title: 'IA',
-        tabBarIcon: ({ color, focused }) => (
+          title: 'IA',
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-            name={focused ? 'sparkles' : 'sparkles-outline'}
-            size={23}
-            color={typeof color === 'string' ? color : '#7957DC'}
+              name={focused ? 'sparkles' : 'sparkles-outline'}
+              size={23}
+              color={typeof color === 'string' ? color : '#7957DC'}
             />
-        ),
+          ),
         }}
-    />
+      />
 
-    <Tabs.Screen
+      <Tabs.Screen
         name="perfil"
         options={{
-        title: 'Perfil',
-        tabBarIcon: ({ color, focused }) => (
+          title: 'Perfil',
+          tabBarIcon: ({ color, focused }) => (
             <Ionicons
-            name={focused ? 'person' : 'person-outline'}
-            size={23}
-            color={typeof color === 'string' ? color : '#7957DC'}
+              name={focused ? 'person' : 'person-outline'}
+              size={23}
+              color={typeof color === 'string' ? color : '#7957DC'}
             />
-        ),
+          ),
         }}
-    />
+      />
     </Tabs>
-);
+  );
 }
