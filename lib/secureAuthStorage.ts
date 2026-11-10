@@ -8,142 +8,103 @@ const MAX_SECURE_VALUE_BYTES = 1800;
 // Expo Router renders routes once in Node during web development/builds.
 // AsyncStorage's web adapter delegates to window.localStorage, which does
 // not exist during that server render.
-const isWebServer =
-  Platform.OS === 'web' && typeof window === 'undefined';
+const isWebServer = Platform.OS === 'web' && typeof window === 'undefined';
 
 function getKeyName(key: string, suffix: string): string {
-return `${KEY_PREFIX}-${encodeURIComponent(key).replace(
-    /%/g,
-    '_'
-)}-${suffix}`;
+  return `${KEY_PREFIX}-${encodeURIComponent(key).replace(/%/g, '_')}-${suffix}`;
 }
 
 function encodedByteLength(value: string): number {
-return encodeURIComponent(value).length;
+  return encodeURIComponent(value).length;
 }
 
 function splitIntoChunks(value: string): string[] {
-const characters = Array.from(value);
-const chunks: string[] = [];
-let current = '';
+  const characters = Array.from(value);
+  const chunks: string[] = [];
+  let current = '';
 
-for (const character of characters) {
+  for (const character of characters) {
     const next = current + character;
 
-    if (
-    current &&
-    encodedByteLength(next) > MAX_SECURE_VALUE_BYTES
-    ) {
-    chunks.push(current);
-    current = character;
+    if (current && encodedByteLength(next) > MAX_SECURE_VALUE_BYTES) {
+      chunks.push(current);
+      current = character;
     } else {
-    current = next;
+      current = next;
     }
-}
+  }
 
-if (current || chunks.length === 0) {
+  if (current || chunks.length === 0) {
     chunks.push(current);
-}
+  }
 
-return chunks;
+  return chunks;
 }
 
 async function getChunkCount(key: string): Promise<number | null> {
-const manifest = await SecureStore.getItemAsync(
-    getKeyName(key, 'manifest')
-);
+  const manifest = await SecureStore.getItemAsync(getKeyName(key, 'manifest'));
 
-if (!manifest) return null;
+  if (!manifest) return null;
 
-const count = Number(manifest);
+  const count = Number(manifest);
 
-return Number.isInteger(count) && count > 0 ? count : null;
+  return Number.isInteger(count) && count > 0 ? count : null;
 }
 
-async function writeSecureValue(
-key: string,
-value: string
-): Promise<void> {
-const previousCount = await getChunkCount(key);
-const chunks = splitIntoChunks(value);
+async function writeSecureValue(key: string, value: string): Promise<void> {
+  const previousCount = await getChunkCount(key);
+  const chunks = splitIntoChunks(value);
 
-await Promise.all(
-    chunks.map((chunk, index) =>
-    SecureStore.setItemAsync(
-        getKeyName(key, `chunk-${index}`),
-        chunk
-    )
-    )
-);
+  await Promise.all(
+    chunks.map((chunk, index) => SecureStore.setItemAsync(getKeyName(key, `chunk-${index}`), chunk))
+  );
 
-await SecureStore.setItemAsync(
-    getKeyName(key, 'manifest'),
-    String(chunks.length)
-);
+  await SecureStore.setItemAsync(getKeyName(key, 'manifest'), String(chunks.length));
 
-if (previousCount && previousCount > chunks.length) {
+  if (previousCount && previousCount > chunks.length) {
     await Promise.all(
-    Array.from(
-        { length: previousCount - chunks.length },
-        (_, index) =>
-        SecureStore.deleteItemAsync(
-            getKeyName(
-            key,
-            `chunk-${chunks.length + index}`
-            )
-        )
-    )
+      Array.from({ length: previousCount - chunks.length }, (_, index) =>
+        SecureStore.deleteItemAsync(getKeyName(key, `chunk-${chunks.length + index}`))
+      )
     );
+  }
 }
-}
 
-async function readSecureValue(
-key: string
-): Promise<string | null> {
-const count = await getChunkCount(key);
+async function readSecureValue(key: string): Promise<string | null> {
+  const count = await getChunkCount(key);
 
-if (!count) return null;
+  if (!count) return null;
 
-const chunks = await Promise.all(
-    Array.from(
-    { length: count },
-    (_, index) =>
-        SecureStore.getItemAsync(
-        getKeyName(key, `chunk-${index}`)
-        )
+  const chunks = await Promise.all(
+    Array.from({ length: count }, (_, index) =>
+      SecureStore.getItemAsync(getKeyName(key, `chunk-${index}`))
     )
-);
+  );
 
-if (chunks.some((chunk) => chunk === null)) return null;
+  if (chunks.some((chunk) => chunk === null)) return null;
 
-return chunks.join('');
+  return chunks.join('');
 }
 
 async function removeSecureValue(key: string): Promise<void> {
-const count = await getChunkCount(key);
+  const count = await getChunkCount(key);
 
-if (count) {
+  if (count) {
     await Promise.all(
-    Array.from(
-        { length: count },
-        (_, index) =>
-        SecureStore.deleteItemAsync(
-            getKeyName(key, `chunk-${index}`)
-        )
-    )
+      Array.from({ length: count }, (_, index) =>
+        SecureStore.deleteItemAsync(getKeyName(key, `chunk-${index}`))
+      )
     );
-}
+  }
 
-await SecureStore.deleteItemAsync(
-    getKeyName(key, 'manifest')
-);
+  await SecureStore.deleteItemAsync(getKeyName(key, 'manifest'));
 }
 
 export const authStorage = {
-async getItem(key: string): Promise<string | null> {
+  async getItem(key: string): Promise<string | null> {
     if (Platform.OS === 'web') {
-    if (isWebServer) return null;
-    return window.localStorage.getItem(key);
+      if (isWebServer) return null;
+      return window.localStorage.getItem(key);
     }
 
     const secureValue = await readSecureValue(key);
@@ -156,34 +117,34 @@ async getItem(key: string): Promise<string | null> {
     if (legacyValue === null) return null;
 
     try {
-    await writeSecureValue(key, legacyValue);
-    await AsyncStorage.removeItem(key);
+      await writeSecureValue(key, legacyValue);
+      await AsyncStorage.removeItem(key);
     } catch {
-    // If SecureStore is temporarily unavailable, keep the old session usable.
+      // If SecureStore is temporarily unavailable, keep the old session usable.
     }
 
     return legacyValue;
-},
+  },
 
-async setItem(key: string, value: string): Promise<void> {
+  async setItem(key: string, value: string): Promise<void> {
     if (Platform.OS === 'web') {
-    if (isWebServer) return;
-    window.localStorage.setItem(key, value);
-    return;
+      if (isWebServer) return;
+      window.localStorage.setItem(key, value);
+      return;
     }
 
     await writeSecureValue(key, value);
     await AsyncStorage.removeItem(key);
-},
+  },
 
-async removeItem(key: string): Promise<void> {
+  async removeItem(key: string): Promise<void> {
     if (Platform.OS === 'web') {
-    if (isWebServer) return;
-    window.localStorage.removeItem(key);
-    return;
+      if (isWebServer) return;
+      window.localStorage.removeItem(key);
+      return;
     }
 
     await removeSecureValue(key);
     await AsyncStorage.removeItem(key);
-},
+  },
 };

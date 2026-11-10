@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, Text, View, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -55,10 +54,7 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <SafeAreaView
-      className="flex-1 bg-[#FAF9FF]"
-      edges={['top', 'bottom']}
-    >
+    <SafeAreaView className="flex-1 bg-[#FAF9FF]" edges={['top', 'bottom']}>
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
@@ -67,8 +63,7 @@ export default function WelcomeScreen() {
           paddingTop: 42,
           paddingBottom: 48,
         }}
-        showsVerticalScrollIndicator={false}
-      >
+        showsVerticalScrollIndicator={false}>
         {/* LOGO */}
         <View className="items-center">
           <Image
@@ -79,9 +74,7 @@ export default function WelcomeScreen() {
         </View>
 
         {/* DESCRIPCIÓN */}
-        <Text className="mt-5 text-[18px] text-[#817995]">
-          Tu vida universitaria, organizada.
-        </Text>
+        <Text className="mt-5 text-[18px] text-[#817995]">Tu vida universitaria, organizada.</Text>
 
         {/* TARJETA */}
         <View className="mt-5">
@@ -93,20 +86,16 @@ export default function WelcomeScreen() {
 
         {/* BOTONES */}
 
-{/* BOTONES */}
-<View className="gap-4">
-  <PrimaryButton
-    title="Comenzar"
-    onPress={() => router.push('/register')}
-  />
+        {/* BOTONES */}
+        <View className="gap-4">
+          <PrimaryButton title="Comenzar" onPress={() => router.push('/register')} />
 
-  <PrimaryButton
-    title="Ya tengo cuenta"
-    variant="secondary"
-    onPress={() => router.push('/login')}
-  />
-</View>
-
+          <PrimaryButton
+            title="Ya tengo cuenta"
+            variant="secondary"
+            onPress={() => router.push('/login')}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

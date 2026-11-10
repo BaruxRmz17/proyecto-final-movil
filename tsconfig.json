@@ -4,6 +4,7 @@
     "strict": true,
     "jsx": "react-jsx",
     "jsxImportSource": "nativewind",
+    "types": ["node"],
 
     "paths": {
       "@/*": ["./*"]

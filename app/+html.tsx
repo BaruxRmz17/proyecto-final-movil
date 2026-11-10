@@ -6,10 +6,7 @@ let nativeWindStyles = '';
 
 try {
   nativeWindStyles = readFileSync(
-    join(
-      process.cwd(),
-      'node_modules/react-native-css-interop/.cache/web.css'
-    ),
+    join(process.cwd(), 'node_modules/react-native-css-interop/.cache/web.css'),
     'utf8'
   );
 } catch {
