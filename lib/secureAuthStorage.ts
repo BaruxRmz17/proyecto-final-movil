@@ -143,7 +143,7 @@ export const authStorage = {
 async getItem(key: string): Promise<string | null> {
     if (Platform.OS === 'web') {
     if (isWebServer) return null;
-    return AsyncStorage.getItem(key);
+    return window.localStorage.getItem(key);
     }
 
     const secureValue = await readSecureValue(key);
@@ -168,7 +168,7 @@ async getItem(key: string): Promise<string | null> {
 async setItem(key: string, value: string): Promise<void> {
     if (Platform.OS === 'web') {
     if (isWebServer) return;
-    await AsyncStorage.setItem(key, value);
+    window.localStorage.setItem(key, value);
     return;
     }
 
@@ -179,7 +179,7 @@ async setItem(key: string, value: string): Promise<void> {
 async removeItem(key: string): Promise<void> {
     if (Platform.OS === 'web') {
     if (isWebServer) return;
-    await AsyncStorage.removeItem(key);
+    window.localStorage.removeItem(key);
     return;
     }
 

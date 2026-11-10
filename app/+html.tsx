@@ -1,4 +1,20 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { ScrollViewStyleReset } from 'expo-router/html';
+
+let nativeWindStyles = '';
+
+try {
+  nativeWindStyles = readFileSync(
+    join(
+      process.cwd(),
+      'node_modules/react-native-css-interop/.cache/web.css'
+    ),
+    'utf8'
+  );
+} catch {
+  // Metro may not have generated the stylesheet yet during the first render.
+}
 
 // This file is web-only and used to configure the root HTML for every
 // web page during static rendering.
@@ -25,6 +41,8 @@ export default function Root({ children }: { children: React.ReactNode }) {
           However, body scrolling is often nice to have for mobile web. If you want to enable it, remove this line.
         */}
         <ScrollViewStyleReset />
+
+        <style dangerouslySetInnerHTML={{ __html: nativeWindStyles }} />
 
         {/* Using raw CSS styles as an escape-hatch to ensure the background color never flickers in dark-mode. */}
         <style dangerouslySetInnerHTML={{ __html: responsiveBackground }} />

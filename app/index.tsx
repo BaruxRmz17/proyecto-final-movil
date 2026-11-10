@@ -10,21 +10,36 @@ import { supabase } from '@/lib/supabase';
 
 export default function WelcomeScreen() {
   const router = useRouter();
-  const [checkingSession, setCheckingSession] = useState(true);
+  // La pantalla de bienvenida no debe bloquearse si el navegador tarda en
+  // resolver la sesión de Supabase.
+  const [checkingSession, setCheckingSession] = useState(false);
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
+    const checkSession = async () => {
+      try {
+        const { data } = await Promise.race([
+          supabase.auth.getSession(),
+          new Promise<{ data: { session: null } }>((resolve) => {
+            setTimeout(() => resolve({ data: { session: null } }), 5000);
+          }),
+        ]);
 
-      if (data.session) {
-        router.replace('/(tabs)');
-        return;
+        if (!mounted) return;
+
+        if (data.session) {
+          router.replace('/(tabs)');
+          return;
+        }
+      } catch (error) {
+        console.warn('No se pudo comprobar la sesión:', error);
+      } finally {
+        if (mounted) setCheckingSession(false);
       }
+    };
 
-      setCheckingSession(false);
-    });
+    void checkSession();
 
     return () => {
       mounted = false;

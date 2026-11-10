@@ -6,6 +6,13 @@
         "buildType": "apk"
       },
       "environment": "preview"
+    },
+    "production": {
+      "distribution": "store",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "environment": "production"
     }
   }
 }
