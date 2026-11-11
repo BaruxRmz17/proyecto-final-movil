@@ -31,12 +31,10 @@ const handleRecoverPassword = () => {
     return;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
+    if (!email.includes('@')) {
     Alert.alert(
         'Correo inválido',
-        'Ingresa un correo electrónico válido.'
+        'El correo debe incluir @.'
     );
     return;
     }

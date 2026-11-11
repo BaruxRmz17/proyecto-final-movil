@@ -42,13 +42,11 @@ const handleRegister = async () => {
     return;
     }
 
-    // Validar formato del correo
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(email)) {
+    // Por ahora solo exigimos el carácter @.
+    if (!email.includes('@')) {
     Alert.alert(
         'Correo inválido',
-        'Ingresa un correo electrónico válido.'
+        'El correo debe incluir @.'
     );
     return;
     }
